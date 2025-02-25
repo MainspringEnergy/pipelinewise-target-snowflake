@@ -1,4 +1,6 @@
+import base64
 import json
+import os
 import sys
 import snowflake.connector
 import re
@@ -291,6 +293,13 @@ class DbSync:
         if self.stream_schema_message:
             stream = self.stream_schema_message['stream']
 
+        private_key_file = None
+        if 'SNOWFLAKE_PRIVATE_KEY_B64' in os.environ:
+            private_key_file = '/tmp/snowflake-rsa_key.p8'
+
+        with open(private_key_file, 'wb') as keyfile:
+            keyfile.write(base64.b64decode(bytes(os.getenv('SNOWFLAKE_PRIVATE_KEY_B64', ''), 'utf-8')))
+
         return snowflake.connector.connect(
             user=self.connection_config['user'],
             password=self.connection_config['password'],
@@ -302,6 +311,7 @@ class DbSync:
             authenticator='username_password_mfa',
             client_store_temporary_credential=True,
             client_request_mfa_token=True,
+            private_key_file=private_key_file,
             session_parameters={
                 # Quoted identifiers should be case sensitive
                 'QUOTED_IDENTIFIERS_IGNORE_CASE': 'FALSE',
@@ -309,7 +319,7 @@ class DbSync:
                                               database=self.connection_config['dbname'],
                                               schema=self.schema_name,
                                               table=self.table_name(stream, False, True))
-            }
+            },
         )
 
     def query(self, query: Union[str, List[str]], params: Dict = None, max_records=0) -> List[Dict]:
