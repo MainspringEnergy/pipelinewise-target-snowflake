@@ -297,8 +297,9 @@ class DbSync:
         if 'SNOWFLAKE_PRIVATE_KEY_B64' in os.environ:
             private_key_file = '/tmp/snowflake-rsa_key.p8'
 
-        with open(private_key_file, 'wb') as keyfile:
-            keyfile.write(base64.b64decode(bytes(os.getenv('SNOWFLAKE_PRIVATE_KEY_B64', ''), 'utf-8')))
+        if not os.path.exists(private_key_file):
+            with open(private_key_file, 'wb') as keyfile:
+                keyfile.write(base64.b64decode(bytes(os.getenv('SNOWFLAKE_PRIVATE_KEY_B64', ''), 'utf-8')))
 
         return snowflake.connector.connect(
             user=self.connection_config['user'],
